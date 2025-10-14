@@ -31,6 +31,7 @@ export const action = async ({ request }) => {
                     title
                     price
                     sku
+                    compareAtPrice
                   }
                 }
               }
@@ -139,45 +140,90 @@ export default function Index() {
             gridTemplateColumns="repeat(auto-fit, minmax(300px, 1fr))"
             gap="base"
           >
-            {fetcher.data.products.slice(0, 6).map((product) => (
-              <s-box
-                key={product.id}
-                border="base"
-                borderRadius="base"
-                padding="base"
-                background="base"
-              >
-                <s-grid gap="small-400">
-                  <s-heading level="3">{product.title}</s-heading>
-                  <s-text variant="bodyMd" tone="subdued">
-                    {product.variants.edges.length} variant{product.variants.edges.length !== 1 ? 's' : ''}
-                  </s-text>
-                  <s-text variant="bodyMd" tone="subdued">
-                    Status: {product.status}
-                  </s-text>
-                  <s-stack direction="inline" gap="small-200">
-                    <s-button 
-                      size="micro" 
-                      variant="primary"
-                      onClick={() => selectProduct(product)}
+            {fetcher.data.products.slice(0, 6).map((product) => {
+              const firstVariant = product.variants.edges[0]?.node;
+              const sellingPrice = parseFloat(firstVariant?.price || 0);
+              // Cost data would come from Shopify's cost field - for now showing as not available
+              const cost = 0; // parseFloat(firstVariant?.cost || 0);
+              const margin = cost > 0 ? ((sellingPrice - cost) / sellingPrice * 100).toFixed(1) : 'N/A';
+              const profit = cost > 0 ? (sellingPrice - cost).toFixed(2) : 'N/A';
+              
+              return (
+                <s-box
+                  key={product.id}
+                  border="base"
+                  borderRadius="base"
+                  padding="base"
+                  background="base"
+                >
+                  <s-grid gap="small-400">
+                    <s-heading level="3">{product.title}</s-heading>
+                    <s-text variant="bodyMd" tone="subdued">
+                      {product.variants.edges.length} variant{product.variants.edges.length !== 1 ? 's' : ''}
+                    </s-text>
+                    <s-text variant="bodyMd" tone="subdued">
+                      Status: {product.status}
+                    </s-text>
+                    
+                    {/* Cost and Margin Information */}
+                    <s-box
+                      padding="small"
+                      background="subdued"
+                      borderRadius="base"
                     >
-                      Setup Pricing
-                    </s-button>
-                    <s-button
-                      size="micro"
-                      variant="tertiary"
-                      onClick={() => {
-                        shopify.intents.invoke?.("edit:shopify/Product", {
-                          value: product.id,
-                        });
-                      }}
-                    >
-                      Edit Product
-                    </s-button>
-                  </s-stack>
-                </s-grid>
-              </s-box>
-            ))}
+                      <s-grid gap="small-200">
+                        <s-text variant="bodySm" fontWeight="semibold">Pricing Info:</s-text>
+                        <s-grid gap="small-100">
+                          <s-stack direction="inline" gap="small-200" style={{ justifyContent: 'space-between' }}>
+                            <s-text variant="bodySm">Selling Price:</s-text>
+                            <s-text variant="bodySm" fontWeight="semibold">${sellingPrice.toFixed(2)}</s-text>
+                          </s-stack>
+                          <s-stack direction="inline" gap="small-200" style={{ justifyContent: 'space-between' }}>
+                            <s-text variant="bodySm">Cost:</s-text>
+                            <s-text variant="bodySm" fontWeight="semibold">
+                              {cost > 0 ? `$${cost.toFixed(2)}` : 'Not set'}
+                            </s-text>
+                          </s-stack>
+                          <s-stack direction="inline" gap="small-200" style={{ justifyContent: 'space-between' }}>
+                            <s-text variant="bodySm">Margin:</s-text>
+                            <s-text variant="bodySm" fontWeight="semibold" tone={margin !== 'N/A' ? (margin >= 50 ? 'success' : margin >= 30 ? 'warning' : 'critical') : 'neutral'}>
+                              {margin !== 'N/A' ? `${margin}%` : 'N/A'}
+                            </s-text>
+                          </s-stack>
+                          <s-stack direction="inline" gap="small-200" style={{ justifyContent: 'space-between' }}>
+                            <s-text variant="bodySm">Profit:</s-text>
+                            <s-text variant="bodySm" fontWeight="semibold" tone={profit !== 'N/A' ? (parseFloat(profit) > 0 ? 'success' : 'critical') : 'neutral'}>
+                              {profit !== 'N/A' ? `$${profit}` : 'N/A'}
+                            </s-text>
+                          </s-stack>
+                        </s-grid>
+                      </s-grid>
+                    </s-box>
+                    
+                    <s-stack direction="inline" gap="small-200">
+                      <s-button 
+                        size="micro" 
+                        variant="primary"
+                        onClick={() => selectProduct(product)}
+                      >
+                        Setup Pricing
+                      </s-button>
+                      <s-button
+                        size="micro"
+                        variant="tertiary"
+                        onClick={() => {
+                          shopify.intents.invoke?.("edit:shopify/Product", {
+                            value: product.id,
+                          });
+                        }}
+                      >
+                        Edit Product
+                      </s-button>
+                    </s-stack>
+                  </s-grid>
+                </s-box>
+              );
+            })}
           </s-grid>
           {fetcher.data.products.length > 6 && (
             <s-stack

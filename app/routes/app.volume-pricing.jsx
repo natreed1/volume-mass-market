@@ -17,6 +17,17 @@ export default function VolumePricingConfig() {
   
   const [displayType, setDisplayType] = useState("dropdown");
   const [colorScheme, setColorScheme] = useState("blue");
+  
+  // Mock product data - in real app this would come from the selected product
+  const [productData] = useState({
+    id: "gid://shopify/Product/123456789",
+    title: "Premium Widget",
+    sellingPrice: 29.99,
+    cost: 15.00, // This would come from Shopify product cost field
+    variants: [
+      { id: "variant1", title: "Default", price: "29.99", cost: "15.00" }
+    ]
+  });
 
   const addPricingRule = () => {
     setPricingRules([...pricingRules, { quantity: "", discountValue: "" }]);
@@ -30,6 +41,30 @@ export default function VolumePricingConfig() {
 
   const removePricingRule = (index) => {
     setPricingRules(pricingRules.filter((_, i) => i !== index));
+  };
+
+  // Calculate margin for a given discount
+  const calculateMargin = (discountValue) => {
+    const sellingPrice = productData.sellingPrice;
+    const cost = productData.cost;
+    
+    if (cost <= 0) return { margin: 'N/A', profit: 'N/A', discountedPrice: sellingPrice };
+    
+    let discountedPrice;
+    if (globalDiscountType === "percentage") {
+      discountedPrice = sellingPrice * (1 - discountValue / 100);
+    } else {
+      discountedPrice = sellingPrice - discountValue;
+    }
+    
+    const profit = discountedPrice - cost;
+    const margin = (profit / discountedPrice) * 100;
+    
+    return {
+      margin: margin.toFixed(1),
+      profit: profit.toFixed(2),
+      discountedPrice: discountedPrice.toFixed(2)
+    };
   };
 
   const savePricingRules = () => {
@@ -60,6 +95,63 @@ export default function VolumePricingConfig() {
       >
         Back to Products
       </s-button>
+
+      <s-section heading="Product Information">
+        <s-paragraph>
+          Review and update product cost information to calculate accurate margins for your volume pricing.
+        </s-paragraph>
+        
+        <s-box
+          padding="base"
+          borderWidth="base"
+          borderRadius="base"
+          background="subdued"
+        >
+          <s-stack direction="block" gap="base">
+            <s-heading level="3">Current Product: {productData.title}</s-heading>
+            
+            <s-grid gap="base">
+              <s-grid gap="small-200">
+                <s-text variant="bodyMd" fontWeight="semibold">Selling Price:</s-text>
+                <s-text variant="bodyMd">${productData.sellingPrice}</s-text>
+              </s-grid>
+              
+              <s-grid gap="small-200">
+                <s-text variant="bodyMd" fontWeight="semibold">Product Cost:</s-text>
+                <s-text variant="bodyMd" tone={productData.cost > 0 ? 'success' : 'warning'}>
+                  {productData.cost > 0 ? `$${productData.cost}` : 'Not set - Add cost to see margin calculations'}
+                </s-text>
+              </s-grid>
+              
+              <s-grid gap="small-200">
+                <s-text variant="bodyMd" fontWeight="semibold">Current Margin:</s-text>
+                <s-text variant="bodyMd" tone={productData.cost > 0 ? ((productData.sellingPrice - productData.cost) / productData.sellingPrice * 100 >= 30 ? 'success' : 'warning') : 'neutral'}>
+                  {productData.cost > 0 ? `${((productData.sellingPrice - productData.cost) / productData.sellingPrice * 100).toFixed(1)}%` : 'N/A'}
+                </s-text>
+              </s-grid>
+            </s-grid>
+            
+            <s-stack direction="inline" gap="small-200">
+              <s-button 
+                variant="tertiary"
+                onClick={() => {
+                  shopify.intents.invoke?.("edit:shopify/Product", {
+                    value: productData.id,
+                  });
+                }}
+              >
+                Edit Product Cost in Shopify
+              </s-button>
+              <s-button 
+                variant="tertiary"
+                onClick={() => shopify.toast.show("Manual cost entry feature coming soon!")}
+              >
+                Add Cost Manually
+              </s-button>
+            </s-stack>
+          </s-stack>
+        </s-box>
+      </s-section>
 
       <s-section heading="Volume Pricing Rules">
         <s-paragraph>
@@ -101,41 +193,61 @@ export default function VolumePricingConfig() {
                     <s-table-header>
                       Discount Value {globalDiscountType === "amount" ? "($)" : "(%)"}
                     </s-table-header>
+                    <s-table-header>Discounted Price</s-table-header>
+                    <s-table-header>Margin Impact</s-table-header>
                     <s-table-header>Actions</s-table-header>
                   </s-table-row>
                 </s-table-head>
                 <s-table-body>
-                  {pricingRules.map((rule, index) => (
-                    <s-table-row key={index}>
-                      <s-table-cell>
-                        <s-text-field
-                          type="number"
-                          value={rule.quantity}
-                          onChange={(e) => updatePricingRule(index, "quantity", parseInt(e.target.value) || "")}
-                          placeholder="Quantity"
-                        />
-                      </s-table-cell>
-                      <s-table-cell>
-                        <s-text-field
-                          type="number"
-                          value={rule.discountValue}
-                          onChange={(e) => updatePricingRule(index, "discountValue", parseFloat(e.target.value) || "")}
-                          placeholder={globalDiscountType === "amount" ? "0.00" : "0"}
-                          prefix={globalDiscountType === "amount" ? "$" : ""}
-                          suffix={globalDiscountType === "percentage" ? "%" : ""}
-                        />
-                      </s-table-cell>
-                      <s-table-cell>
-                        <s-button
-                          size="micro"
-                          variant="tertiary"
-                          onClick={() => removePricingRule(index)}
-                        >
-                          Remove
-                        </s-button>
-                      </s-table-cell>
-                    </s-table-row>
-                  ))}
+                  {pricingRules.map((rule, index) => {
+                    const marginData = calculateMargin(rule.discountValue);
+                    return (
+                      <s-table-row key={index}>
+                        <s-table-cell>
+                          <s-text-field
+                            type="number"
+                            value={rule.quantity}
+                            onChange={(e) => updatePricingRule(index, "quantity", parseInt(e.target.value) || "")}
+                            placeholder="Quantity"
+                          />
+                        </s-table-cell>
+                        <s-table-cell>
+                          <s-text-field
+                            type="number"
+                            value={rule.discountValue}
+                            onChange={(e) => updatePricingRule(index, "discountValue", parseFloat(e.target.value) || "")}
+                            placeholder={globalDiscountType === "amount" ? "0.00" : "0"}
+                            prefix={globalDiscountType === "amount" ? "$" : ""}
+                            suffix={globalDiscountType === "percentage" ? "%" : ""}
+                          />
+                        </s-table-cell>
+                        <s-table-cell>
+                          <s-text variant="bodySm" fontWeight="semibold">
+                            ${marginData.discountedPrice}
+                          </s-text>
+                        </s-table-cell>
+                        <s-table-cell>
+                          <s-grid gap="small-100">
+                            <s-text variant="bodySm" tone={marginData.margin !== 'N/A' ? (parseFloat(marginData.margin) >= 30 ? 'success' : parseFloat(marginData.margin) >= 15 ? 'warning' : 'critical') : 'neutral'}>
+                              {marginData.margin !== 'N/A' ? `${marginData.margin}%` : 'N/A'}
+                            </s-text>
+                            <s-text variant="bodySm" tone="subdued">
+                              Profit: ${marginData.profit}
+                            </s-text>
+                          </s-grid>
+                        </s-table-cell>
+                        <s-table-cell>
+                          <s-button
+                            size="micro"
+                            variant="tertiary"
+                            onClick={() => removePricingRule(index)}
+                          >
+                            Remove
+                          </s-button>
+                        </s-table-cell>
+                      </s-table-row>
+                    );
+                  })}
                 </s-table-body>
               </s-table>
 
