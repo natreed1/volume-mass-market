@@ -30,3 +30,113 @@ model Session {
   collaborator  Boolean?  @default(false)
   emailVerified Boolean?  @default(false)
 }
+
+// Volume Pricing Models
+model VolumeModel {
+  id          String   @id @default(cuid())
+  shopId      String   // Critical for multi-tenant extensions
+  name        String
+  active      Boolean  @default(false)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  
+  // Relationships
+  productAssociations ProductVolumeAssociation[]
+  tiers              VolumeTier[]
+  themeSettings      ThemeExtensionSettings?
+  adminSettings      AdminExtensionSettings?
+  
+  @@index([shopId])
+  @@index([shopId, active])
+}
+
+// Product associations (many-to-many)
+model ProductVolumeAssociation {
+  id           String @id @default(cuid())
+  volumeModelId String
+  productId    String // Shopify product GID
+  active       Boolean @default(true)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+  
+  volumeModel  VolumeModel @relation(fields: [volumeModelId], references: [id], onDelete: Cascade)
+  variants     ProductVariantAssociation[]
+  
+  @@unique([volumeModelId, productId])
+  @@index([productId])
+  @@index([volumeModelId])
+}
+
+// Product variant associations (for specific variants)
+model ProductVariantAssociation {
+  id           String @id @default(cuid())
+  productVolumeAssociationId String
+  variantId    String // Shopify product variant GID
+  createdAt    DateTime @default(now())
+  
+  productVolumeAssociation ProductVolumeAssociation @relation(fields: [productVolumeAssociationId], references: [id], onDelete: Cascade)
+  
+  @@unique([productVolumeAssociationId, variantId])
+  @@index([variantId])
+}
+
+// Pricing tiers
+model VolumeTier {
+  id            String @id @default(cuid())
+  volumeModelId String
+  minQty        Int
+  maxQty        Int?
+  discountType  String // PERCENT, AMOUNT, FIXED_PRICE
+  discountValue Float
+  sortOrder     Int    @default(0)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+  
+  volumeModel   VolumeModel @relation(fields: [volumeModelId], references: [id], onDelete: Cascade)
+  
+  @@index([volumeModelId])
+}
+
+// Theme extension specific settings
+model ThemeExtensionSettings {
+  id            String @id @default(cuid())
+  volumeModelId String @unique
+  displayStyle  String // BADGE_ROW, TIER_TABLE, INLINE_BANNER
+  showPerUnit   Boolean @default(true)
+  showCompareAt Boolean @default(false)
+  badgeTone     String? // success, attention, info, subdued
+  customCopy    String?
+  cssOverrides  String? // Custom CSS for theme integration
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+  
+  volumeModel   VolumeModel @relation(fields: [volumeModelId], references: [id], onDelete: Cascade)
+}
+
+// Admin extension settings
+model AdminExtensionSettings {
+  id            String @id @default(cuid())
+  volumeModelId String @unique
+  showInProductList Boolean @default(true)
+  bulkActionsEnabled Boolean @default(true)
+  analyticsEnabled   Boolean @default(true)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+  
+  volumeModel   VolumeModel @relation(fields: [volumeModelId], references: [id], onDelete: Cascade)
+}
+
+// Performance optimization cache
+model VolumePricingCache {
+  id          String @id @default(cuid())
+  shopId      String
+  productId   String // Shopify product GID
+  cacheKey    String // Hash of model + product + pricing
+  pricingData Json   // Pre-calculated pricing for extensions
+  expiresAt   DateTime
+  createdAt   DateTime @default(now())
+  
+  @@index([shopId, productId])
+  @@index([cacheKey])
+  @@index([expiresAt])
+}

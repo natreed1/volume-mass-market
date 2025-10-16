@@ -1,0 +1,19 @@
+{
+  "volume_pricing": {
+    "display": "Volume Pricing Display",
+    "loading": "Loading volume pricing...",
+    "badge_row": "Badge Row",
+    "tier_table": "Tier Table",
+    "inline_banner": "Inline Banner",
+    "slider": "Quantity Slider",
+    "dropdown": "Dropdown Select",
+    "grid": "Grid Layout",
+    "show_per_unit": "Show per-unit pricing",
+    "show_compare_at": "Show compare-at price",
+    "badge_color": "Badge Color",
+    "green_success": "Green (Success)",
+    "orange_attention": "Orange (Attention)",
+    "blue_info": "Blue (Info)",
+    "gray_subdued": "Gray (Subdued)"
+  }
+}

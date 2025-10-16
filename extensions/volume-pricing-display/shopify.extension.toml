@@ -1,0 +1,6 @@
+# Learn more about configuring your extension at https://shopify.dev/docs/apps/tools/cli/configuration
+
+name = "volume-pricing-display"
+uid = "16ccfba5-77c8-9d1c-784f-404a90e44131a74597f9"
+type = "theme"
+description = "Customer-facing volume pricing display component"

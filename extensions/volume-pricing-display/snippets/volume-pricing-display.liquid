@@ -1,0 +1,347 @@
+{% comment %}
+  Volume Pricing Display Snippet
+  
+  Usage:
+  {% render 'volume-pricing-display', product: product, display_style: 'BADGE_ROW' %}
+  
+  Parameters:
+  - product: The product object
+  - display_style: 'BADGE_ROW', 'TIER_TABLE', 'INLINE_BANNER', 'SLIDER', 'DROPDOWN', 'GRID'
+  - show_per_unit: true/false
+  - show_compare_at: true/false
+  - badge_tone: 'success', 'attention', 'info', 'subdued'
+{% endcomment %}
+
+{%- assign display_style = display_style | default: 'BADGE_ROW' -%}
+{%- assign show_per_unit = show_per_unit | default: true -%}
+{%- assign show_compare_at = show_compare_at | default: false -%}
+{%- assign badge_tone = badge_tone | default: 'success' -%}
+
+<div 
+  id="volume-pricing-{{ product.id }}" 
+  class="volume-pricing-container"
+  data-product-id="{{ product.id }}"
+  data-display-style="{{ display_style }}"
+  data-show-per-unit="{{ show_per_unit }}"
+  data-show-compare-at="{{ show_compare_at }}"
+  data-badge-tone="{{ badge_tone }}"
+>
+  <!-- Volume pricing will be loaded here via JavaScript -->
+  <div class="volume-pricing-loading">
+    <div class="loading-spinner"></div>
+    <span>Loading volume pricing...</span>
+  </div>
+</div>
+
+<script>
+  // Initialize volume pricing display
+  document.addEventListener('DOMContentLoaded', function() {
+    const containers = document.querySelectorAll('.volume-pricing-container');
+    
+    containers.forEach(container => {
+      const productId = container.dataset.productId;
+      const displayStyle = container.dataset.displayStyle;
+      const showPerUnit = container.dataset.showPerUnit === 'true';
+      const showCompareAt = container.dataset.showCompareAt === 'true';
+      const badgeTone = container.dataset.badgeTone;
+      
+      // Fetch volume pricing data
+      fetch(`/apps/volume-pricing/api/display?productId=gid://shopify/Product/${productId}`)
+        .then(response => response.json())
+        .then(data => {
+          if (data.active) {
+            renderVolumePricing(container, data, displayStyle, showPerUnit, showCompareAt, badgeTone);
+          } else {
+            container.style.display = 'none';
+          }
+        })
+        .catch(error => {
+          console.error('Error loading volume pricing:', error);
+          container.style.display = 'none';
+        });
+    });
+  });
+  
+  function renderVolumePricing(container, data, displayStyle, showPerUnit, showCompareAt, badgeTone) {
+    const tiers = data.tiers || [];
+    if (tiers.length === 0) {
+      container.style.display = 'none';
+      return;
+    }
+    
+    // Clear loading state
+    container.innerHTML = '';
+    
+    // Render based on display style
+    switch (displayStyle) {
+      case 'TIER_TABLE':
+        container.innerHTML = renderTierTable(tiers, showPerUnit);
+        break;
+      case 'SLIDER':
+        container.innerHTML = renderSlider(tiers, showPerUnit);
+        break;
+      case 'DROPDOWN':
+        container.innerHTML = renderDropdown(tiers, showPerUnit);
+        break;
+      case 'GRID':
+        container.innerHTML = renderGrid(tiers, showPerUnit, badgeTone);
+        break;
+      case 'INLINE_BANNER':
+        container.innerHTML = renderInlineBanner(tiers);
+        break;
+      case 'BADGE_ROW':
+      default:
+        container.innerHTML = renderBadgeRow(tiers, showPerUnit, badgeTone);
+        break;
+    }
+  }
+  
+  function renderBadgeRow(tiers, showPerUnit, badgeTone) {
+    const badgeColors = {
+      success: '#008060',
+      attention: '#FF8C00',
+      info: '#0066CC',
+      subdued: '#6B7280'
+    };
+    
+    const color = badgeColors[badgeTone] || badgeColors.success;
+    
+    return `
+      <div class="volume-pricing-badge-row">
+        ${tiers.map(tier => `
+          <div class="volume-pricing-badge" style="background-color: ${color}; color: white;">
+            <div class="badge-quantity">${tier.minQty}+ units</div>
+            <div class="badge-price">
+              ${formatPrice(calculatePrice(tier))}
+              ${showPerUnit ? '<span class="per-unit">/unit</span>' : ''}
+            </div>
+            <div class="badge-savings">Save ${formatPrice(getSavings(tier))}</div>
+          </div>
+        `).join('')}
+      </div>
+    `;
+  }
+  
+  function renderTierTable(tiers, showPerUnit) {
+    return `
+      <div class="volume-pricing-table">
+        <h4>Volume Pricing</h4>
+        <table>
+          <thead>
+            <tr>
+              <th>Quantity</th>
+              <th>Price</th>
+              ${showPerUnit ? '<th>Per Unit</th>' : ''}
+              <th>You Save</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${tiers.map(tier => `
+              <tr>
+                <td>${tier.minQty}+</td>
+                <td>${formatPrice(calculatePrice(tier))}</td>
+                ${showPerUnit ? `<td>${formatPrice(calculatePrice(tier) / tier.minQty)}</td>` : ''}
+                <td>${formatPrice(getSavings(tier))}</td>
+              </tr>
+            `).join('')}
+          </tbody>
+        </table>
+      </div>
+    `;
+  }
+  
+  function renderSlider(tiers, showPerUnit) {
+    return `
+      <div class="volume-pricing-slider">
+        <h4>Quantity Discount</h4>
+        <div class="slider-container">
+          <input type="range" min="1" max="100" value="1" class="quantity-slider" id="quantity-slider">
+          <div class="slider-labels">
+            <span>1</span>
+            <span>100+</span>
+          </div>
+        </div>
+        <div class="current-pricing">
+          <div class="quantity-display">Quantity: <span id="current-quantity">1</span></div>
+          <div class="price-display">
+            <span class="current-price" id="current-price">${formatPrice(getBasePrice())}</span>
+            <span class="savings" id="current-savings" style="display: none;"></span>
+          </div>
+        </div>
+      </div>
+    `;
+  }
+  
+  function renderDropdown(tiers, showPerUnit) {
+    return `
+      <div class="volume-pricing-dropdown">
+        <h4>Select Quantity</h4>
+        <select class="quantity-select" id="quantity-select">
+          ${Array.from({ length: 50 }, (_, i) => i + 1).map(qty => 
+            `<option value="${qty}">${qty} ${qty === 1 ? 'unit' : 'units'}</option>`
+          ).join('')}
+          <option value="100">100+ units</option>
+        </select>
+        <div class="pricing-info">
+          <div class="price" id="dropdown-price">${formatPrice(getBasePrice())}</div>
+          <div class="savings" id="dropdown-savings" style="display: none;"></div>
+        </div>
+      </div>
+    `;
+  }
+  
+  function renderGrid(tiers, showPerUnit, badgeTone) {
+    const badgeColors = {
+      success: '#008060',
+      attention: '#FF8C00',
+      info: '#0066CC',
+      subdued: '#6B7280'
+    };
+    
+    const color = badgeColors[badgeTone] || badgeColors.success;
+    
+    return `
+      <div class="volume-pricing-grid">
+        <h4>Choose Your Quantity</h4>
+        <div class="pricing-grid">
+          ${tiers.map(tier => `
+            <div class="pricing-option" data-quantity="${tier.minQty}">
+              <div class="option-quantity">${tier.minQty}+</div>
+              <div class="option-price">${formatPrice(calculatePrice(tier))}</div>
+              <div class="option-savings">Save ${formatPrice(getSavings(tier))}</div>
+            </div>
+          `).join('')}
+        </div>
+      </div>
+    `;
+  }
+  
+  function renderInlineBanner(tiers) {
+    const bestTier = tiers.reduce((best, tier) => 
+      getSavings(tier) > getSavings(best) ? tier : best
+    );
+    
+    return `
+      <div class="volume-pricing-banner">
+        <div class="banner-content">
+          <span class="banner-text">
+            Buy ${bestTier.minQty}+ and save ${formatPrice(getSavings(bestTier))}!
+          </span>
+          <span class="banner-cta">View Details</span>
+        </div>
+      </div>
+    `;
+  }
+  
+  // Helper functions
+  function getBasePrice() {
+    // This would typically come from the product data
+    return 29.99; // Placeholder
+  }
+  
+  function calculatePrice(tier) {
+    const basePrice = getBasePrice();
+    if (tier.discountType === 'PERCENT') {
+      return basePrice * (1 - tier.discountValue / 100);
+    } else if (tier.discountType === 'AMOUNT') {
+      return Math.max(0, basePrice - tier.discountValue);
+    } else if (tier.discountType === 'FIXED_PRICE') {
+      return tier.discountValue;
+    }
+    return basePrice;
+  }
+  
+  function getSavings(tier) {
+    const basePrice = getBasePrice();
+    const discountedPrice = calculatePrice(tier);
+    return basePrice - discountedPrice;
+  }
+  
+  function formatPrice(price) {
+    return new Intl.NumberFormat('en-US', {
+      style: 'currency',
+      currency: 'USD'
+    }).format(price);
+  }
+</script>
+
+<style>
+  /* Include the CSS from VolumePricingDisplay.css here */
+  .volume-pricing-container {
+    margin: 1rem 0;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  }
+  
+  .volume-pricing-loading {
+    text-align: center;
+    padding: 1rem;
+    color: #6b7280;
+  }
+  
+  .loading-spinner {
+    display: inline-block;
+    width: 20px;
+    height: 20px;
+    border: 3px solid #f3f3f3;
+    border-top: 3px solid #3498db;
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+    margin-right: 0.5rem;
+  }
+  
+  @keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+  }
+  
+  /* Include all other styles from VolumePricingDisplay.css */
+  .volume-pricing-badge-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    margin: 1rem 0;
+  }
+  
+  .volume-pricing-badge {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 0.75rem 1rem;
+    border-radius: 8px;
+    border: 2px solid transparent;
+    transition: all 0.2s ease;
+    cursor: pointer;
+    min-width: 120px;
+    text-align: center;
+  }
+  
+  .volume-pricing-badge:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+  }
+  
+  .badge-quantity {
+    font-size: 0.875rem;
+    font-weight: 600;
+    margin-bottom: 0.25rem;
+  }
+  
+  .badge-price {
+    font-size: 1.125rem;
+    font-weight: 700;
+    margin-bottom: 0.25rem;
+  }
+  
+  .per-unit {
+    font-size: 0.75rem;
+    opacity: 0.8;
+  }
+  
+  .badge-savings {
+    font-size: 0.75rem;
+    font-weight: 500;
+    opacity: 0.9;
+  }
+  
+  /* Add other styles as needed... */
+</style>

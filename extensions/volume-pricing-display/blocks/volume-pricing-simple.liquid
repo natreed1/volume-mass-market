@@ -1,0 +1,186 @@
+{% comment %}
+  Volume Pricing Display Block - Simple Version
+{% endcomment %}
+
+<div 
+  id="volume-pricing-{{ product.id }}" 
+  class="volume-pricing-container"
+  data-product-id="{{ product.id }}"
+>
+  <!-- Volume pricing will be loaded here via JavaScript -->
+  <div class="volume-pricing-loading">
+    <div class="loading-spinner"></div>
+    <span>Loading volume pricing...</span>
+  </div>
+</div>
+
+<script>
+  // Initialize volume pricing display
+  document.addEventListener('DOMContentLoaded', function() {
+    const containers = document.querySelectorAll('.volume-pricing-container');
+    
+    containers.forEach(container => {
+      const productId = container.dataset.productId;
+      
+      // Fetch volume pricing data
+      fetch(`/apps/volume-pricing/api/display?productId=gid://shopify/Product/${productId}`)
+        .then(response => response.json())
+        .then(data => {
+          if (data.active && data.tiers && data.tiers.length > 0) {
+            renderVolumePricing(container, data);
+          } else {
+            container.style.display = 'none';
+          }
+        })
+        .catch(error => {
+          console.error('Error loading volume pricing:', error);
+          container.style.display = 'none';
+        });
+    });
+  });
+  
+  function renderVolumePricing(container, data) {
+    const tiers = data.tiers || [];
+    if (tiers.length === 0) {
+      container.style.display = 'none';
+      return;
+    }
+    
+    // Clear loading state
+    container.innerHTML = '';
+    
+    // Render badge row by default
+    container.innerHTML = renderBadgeRow(tiers);
+  }
+  
+  function renderBadgeRow(tiers) {
+    return `
+      <div class="volume-pricing-badge-row">
+        ${tiers.map(tier => `
+          <div class="volume-pricing-badge" style="background-color: #008060; color: white; padding: 0.75rem; border-radius: 8px; text-align: center; min-width: 120px; margin: 0.25rem; display: inline-block;">
+            <div style="font-size: 0.875rem; font-weight: 600; margin-bottom: 0.25rem;">${tier.minQty}+ units</div>
+            <div style="font-size: 1.125rem; font-weight: 700; margin-bottom: 0.25rem;">
+              ${formatPrice(calculatePrice(tier))}
+              <span style="font-size: 0.75rem; opacity: 0.8;">/unit</span>
+            </div>
+            <div style="font-size: 0.75rem; font-weight: 500; opacity: 0.9;">Save ${formatPrice(getSavings(tier))}</div>
+          </div>
+        `).join('')}
+      </div>
+    `;
+  }
+  
+  // Helper functions
+  function getBasePrice() {
+    const priceElement = document.querySelector('.price .money') ||
+                        document.querySelector('.product-price .money') ||
+                        document.querySelector('[data-price]');
+    
+    if (priceElement) {
+      const priceText = priceElement.textContent || priceElement.dataset.price;
+      const price = parseFloat(priceText.replace(/[^0-9.]/g, ''));
+      return isNaN(price) ? 29.99 : price;
+    }
+    
+    return 29.99;
+  }
+  
+  function calculatePrice(tier) {
+    if (!tier) return getBasePrice();
+    
+    const basePrice = getBasePrice();
+    if (tier.discountType === 'PERCENT') {
+      return basePrice * (1 - tier.discountValue / 100);
+    } else if (tier.discountType === 'AMOUNT') {
+      return Math.max(0, basePrice - tier.discountValue);
+    } else if (tier.discountType === 'FIXED_PRICE') {
+      return tier.discountValue;
+    }
+    return basePrice;
+  }
+  
+  function getSavings(tier) {
+    if (!tier) return 0;
+    const basePrice = getBasePrice();
+    const discountedPrice = calculatePrice(tier);
+    return basePrice - discountedPrice;
+  }
+  
+  function formatPrice(price) {
+    return new Intl.NumberFormat('en-US', {
+      style: 'currency',
+      currency: 'USD'
+    }).format(price);
+  }
+</script>
+
+<style>
+  .volume-pricing-container {
+    margin: 1rem 0;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  }
+  
+  .volume-pricing-loading {
+    text-align: center;
+    padding: 1rem;
+    color: #6b7280;
+  }
+  
+  .loading-spinner {
+    display: inline-block;
+    width: 20px;
+    height: 20px;
+    border: 3px solid #f3f3f3;
+    border-top: 3px solid #3498db;
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+    margin-right: 0.5rem;
+  }
+  
+  @keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+  }
+  
+  .volume-pricing-badge-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    margin: 1rem 0;
+  }
+  
+  .volume-pricing-badge {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 0.75rem 1rem;
+    border-radius: 8px;
+    border: 2px solid transparent;
+    transition: all 0.2s ease;
+    cursor: pointer;
+    min-width: 120px;
+    text-align: center;
+  }
+  
+  .volume-pricing-badge:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+  }
+  
+  @media (max-width: 640px) {
+    .volume-pricing-badge-row {
+      flex-direction: column;
+    }
+    
+    .volume-pricing-badge {
+      min-width: auto;
+    }
+  }
+</style>
+
+{% schema %}
+{
+  "name": "Volume Pricing Display",
+  "target": "section"
+}
+{% endschema %}

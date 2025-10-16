@@ -1,0 +1,377 @@
+/* Volume Pricing Display Styles */
+
+.volume-pricing-display {
+  margin: 1rem 0;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+}
+
+.volume-pricing-loading {
+  text-align: center;
+  padding: 1rem;
+  color: #6b7280;
+}
+
+/* Badge Row Styles */
+.volume-pricing-badge-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin: 1rem 0;
+}
+
+.volume-pricing-badge {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 0.75rem 1rem;
+  border-radius: 8px;
+  border: 2px solid transparent;
+  transition: all 0.2s ease;
+  cursor: pointer;
+  min-width: 120px;
+  text-align: center;
+}
+
+.volume-pricing-badge:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
+
+.volume-pricing-badge.active {
+  border-color: currentColor;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+.badge-quantity {
+  font-size: 0.875rem;
+  font-weight: 600;
+  margin-bottom: 0.25rem;
+}
+
+.badge-price {
+  font-size: 1.125rem;
+  font-weight: 700;
+  margin-bottom: 0.25rem;
+}
+
+.per-unit {
+  font-size: 0.75rem;
+  opacity: 0.8;
+}
+
+.badge-savings {
+  font-size: 0.75rem;
+  font-weight: 500;
+  opacity: 0.9;
+}
+
+/* Tier Table Styles */
+.volume-pricing-table {
+  margin: 1rem 0;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.volume-pricing-table h4 {
+  margin: 0;
+  padding: 1rem;
+  background-color: #f9fafb;
+  border-bottom: 1px solid #e5e7eb;
+  font-size: 1rem;
+  font-weight: 600;
+}
+
+.volume-pricing-table table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.volume-pricing-table th,
+.volume-pricing-table td {
+  padding: 0.75rem 1rem;
+  text-align: left;
+  border-bottom: 1px solid #e5e7eb;
+}
+
+.volume-pricing-table th {
+  background-color: #f9fafb;
+  font-weight: 600;
+  font-size: 0.875rem;
+  color: #374151;
+}
+
+.volume-pricing-table tr.active {
+  background-color: #f0f9ff;
+}
+
+.volume-pricing-table tr:hover {
+  background-color: #f9fafb;
+}
+
+/* Slider Styles */
+.volume-pricing-slider {
+  margin: 1rem 0;
+  padding: 1rem;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  background-color: #f9fafb;
+}
+
+.volume-pricing-slider h4 {
+  margin: 0 0 1rem 0;
+  font-size: 1rem;
+  font-weight: 600;
+}
+
+.slider-container {
+  margin-bottom: 1rem;
+}
+
+.quantity-slider {
+  width: 100%;
+  height: 6px;
+  border-radius: 3px;
+  background: #e5e7eb;
+  outline: none;
+  -webkit-appearance: none;
+}
+
+.quantity-slider::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: #3b82f6;
+  cursor: pointer;
+}
+
+.quantity-slider::-moz-range-thumb {
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: #3b82f6;
+  cursor: pointer;
+  border: none;
+}
+
+.slider-labels {
+  display: flex;
+  justify-content: space-between;
+  margin-top: 0.5rem;
+  font-size: 0.875rem;
+  color: #6b7280;
+}
+
+.current-pricing {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0.75rem;
+  background-color: white;
+  border-radius: 6px;
+  border: 1px solid #e5e7eb;
+}
+
+.quantity-display {
+  font-weight: 600;
+  color: #374151;
+}
+
+.price-display {
+  text-align: right;
+}
+
+.current-price {
+  font-size: 1.25rem;
+  font-weight: 700;
+  color: #059669;
+  display: block;
+}
+
+.savings {
+  font-size: 0.875rem;
+  color: #059669;
+  font-weight: 500;
+}
+
+/* Dropdown Styles */
+.volume-pricing-dropdown {
+  margin: 1rem 0;
+  padding: 1rem;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  background-color: #f9fafb;
+}
+
+.volume-pricing-dropdown h4 {
+  margin: 0 0 1rem 0;
+  font-size: 1rem;
+  font-weight: 600;
+}
+
+.quantity-select {
+  width: 100%;
+  padding: 0.75rem;
+  border: 1px solid #d1d5db;
+  border-radius: 6px;
+  background-color: white;
+  font-size: 1rem;
+  margin-bottom: 1rem;
+}
+
+.quantity-select:focus {
+  outline: none;
+  border-color: #3b82f6;
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+}
+
+.pricing-info {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0.75rem;
+  background-color: white;
+  border-radius: 6px;
+  border: 1px solid #e5e7eb;
+}
+
+.pricing-info .price {
+  font-size: 1.25rem;
+  font-weight: 700;
+  color: #059669;
+}
+
+.pricing-info .savings {
+  font-size: 0.875rem;
+  color: #059669;
+  font-weight: 500;
+}
+
+/* Grid Styles */
+.volume-pricing-grid {
+  margin: 1rem 0;
+}
+
+.volume-pricing-grid h4 {
+  margin: 0 0 1rem 0;
+  font-size: 1rem;
+  font-weight: 600;
+}
+
+.pricing-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+  gap: 0.75rem;
+}
+
+.pricing-option {
+  padding: 1rem;
+  border: 2px solid #e5e7eb;
+  border-radius: 8px;
+  text-align: center;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  background-color: white;
+}
+
+.pricing-option:hover {
+  border-color: #3b82f6;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
+
+.pricing-option.active {
+  border-color: #059669;
+  background-color: #f0fdf4;
+}
+
+.option-quantity {
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: #374151;
+  margin-bottom: 0.5rem;
+}
+
+.option-price {
+  font-size: 1.125rem;
+  font-weight: 700;
+  color: #059669;
+  margin-bottom: 0.25rem;
+}
+
+.option-savings {
+  font-size: 0.75rem;
+  color: #059669;
+  font-weight: 500;
+}
+
+/* Inline Banner Styles */
+.volume-pricing-banner {
+  margin: 1rem 0;
+  padding: 0.75rem 1rem;
+  background: linear-gradient(135deg, #3b82f6, #1d4ed8);
+  color: white;
+  border-radius: 8px;
+  text-align: center;
+}
+
+.banner-content {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.banner-text {
+  font-weight: 600;
+  font-size: 0.875rem;
+}
+
+.banner-cta {
+  background-color: rgba(255, 255, 255, 0.2);
+  padding: 0.25rem 0.75rem;
+  border-radius: 4px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background-color 0.2s ease;
+}
+
+.banner-cta:hover {
+  background-color: rgba(255, 255, 255, 0.3);
+}
+
+/* Responsive Design */
+@media (max-width: 640px) {
+  .volume-pricing-badge-row {
+    flex-direction: column;
+  }
+  
+  .volume-pricing-badge {
+    min-width: auto;
+  }
+  
+  .pricing-grid {
+    grid-template-columns: repeat(auto-fit, minmax(100px, 1fr));
+  }
+  
+  .banner-content {
+    flex-direction: column;
+    text-align: center;
+  }
+  
+  .current-pricing {
+    flex-direction: column;
+    gap: 0.5rem;
+    text-align: center;
+  }
+  
+  .pricing-info {
+    flex-direction: column;
+    gap: 0.5rem;
+    text-align: center;
+  }
+}

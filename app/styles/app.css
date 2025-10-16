@@ -1,0 +1,138 @@
+/* Custom styles to fix Shopify admin UI issues */
+
+/* Reset any conflicting styles that might cause large icons */
+.Polaris-Page {
+  min-height: auto !important;
+}
+
+/* Ensure Frame doesn't cause large icon issues */
+.Polaris-Frame {
+  min-height: auto !important;
+}
+
+.Polaris-Frame__Main {
+  min-height: auto !important;
+}
+
+/* Ensure proper sizing for Polaris components */
+.Polaris-Page__Header {
+  padding: 1rem 0 !important;
+}
+
+.Polaris-Page__Content {
+  padding: 1rem 0 !important;
+}
+
+/* Fix any large icon issues - this is the main fix for oversized icons */
+.Polaris-Icon,
+svg[class*="Polaris-Icon"],
+svg[class*="Icon"],
+.Polaris-Icon svg,
+.Polaris-Icon__Svg {
+  width: 20px !important;
+  height: 20px !important;
+  max-width: 20px !important;
+  max-height: 20px !important;
+  min-width: 20px !important;
+  min-height: 20px !important;
+}
+
+/* Fix any large arrow or chevron icons specifically */
+.Polaris-Icon--chevron-up,
+.Polaris-Icon--chevron-down,
+.Polaris-Icon--chevron-left,
+.Polaris-Icon--chevron-right,
+[class*="chevron"],
+[class*="arrow"] {
+  width: 16px !important;
+  height: 16px !important;
+  max-width: 16px !important;
+  max-height: 16px !important;
+}
+
+/* Fix any large icons in buttons */
+.Polaris-Button .Polaris-Icon,
+.Polaris-Button svg {
+  width: 16px !important;
+  height: 16px !important;
+  max-width: 16px !important;
+  max-height: 16px !important;
+}
+
+/* Ensure buttons and interactive elements are properly sized */
+.Polaris-Button {
+  min-height: 36px !important;
+}
+
+/* Fix any chevron or arrow icons that might be oversized */
+.Polaris-Icon--chevron-up,
+.Polaris-Icon--chevron-down,
+.Polaris-Icon--chevron-left,
+.Polaris-Icon--chevron-right {
+  width: 16px !important;
+  height: 16px !important;
+  max-width: 16px !important;
+  max-height: 16px !important;
+}
+
+/* Ensure proper spacing and layout */
+.Polaris-LegacyStack {
+  gap: 1rem !important;
+}
+
+/* Fix any modal or overlay issues */
+.Polaris-Modal {
+  max-width: 90vw !important;
+  max-height: 90vh !important;
+}
+
+/* Ensure proper text sizing */
+.Polaris-Text {
+  line-height: 1.5 !important;
+}
+
+/* Fix any card spacing issues */
+.Polaris-Card {
+  padding: 1rem !important;
+}
+
+/* Ensure proper form element sizing */
+.Polaris-TextField__Input {
+  min-height: 36px !important;
+}
+
+.Polaris-Select__Input {
+  min-height: 36px !important;
+}
+
+/* Fix any badge or status indicator sizing */
+.Polaris-Badge {
+  font-size: 12px !important;
+  padding: 0.25rem 0.5rem !important;
+}
+
+/* Ensure proper toast positioning */
+.Polaris-Toast {
+  max-width: 400px !important;
+}
+
+/* Fix any skeleton or loading state issues */
+.Polaris-SkeletonBodyText {
+  height: 16px !important;
+}
+
+/* Ensure proper thumbnail sizing */
+.Polaris-Thumbnail {
+  width: 40px !important;
+  height: 40px !important;
+}
+
+/* Fix any empty state issues */
+.Polaris-EmptyState {
+  padding: 2rem !important;
+}
+
+/* Ensure proper banner sizing */
+.Polaris-Banner {
+  padding: 1rem !important;
+}
