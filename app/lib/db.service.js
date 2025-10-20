@@ -23,10 +23,14 @@ export class VolumePricingService {
         tiers: includeTiers ? {
           orderBy: { sortOrder: 'asc' }
         } : false,
-        productAssociations: includeProductCount ? {
+        productAssociations: {
           where: { active: true },
-          select: { id: true }
-        } : false,
+          select: { 
+            id: true, 
+            productId: true,
+            ...(includeProductCount ? {} : { productId: true })
+          }
+        },
         themeSettings: true,
         adminSettings: true
       },

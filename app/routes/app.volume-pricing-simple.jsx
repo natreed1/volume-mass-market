@@ -187,6 +187,12 @@ export default function VolumePricingPageSimple() {
 
   const renderModelRow = (model, index) => {
     const getProductNames = () => {
+      // Use the products array from the API response if available
+      if (model.products && model.products.length > 0) {
+        return model.products.map(p => p.title).join(', ');
+      }
+      
+      // Fallback to looking up by productIds
       return model.productIds.map(id => {
         const product = products.find(p => p.id === id);
         return product?.title || 'Unknown Product';

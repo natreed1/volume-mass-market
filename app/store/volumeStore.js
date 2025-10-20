@@ -319,12 +319,9 @@ export const useVolumeStore = create((set, get) => ({
   updateModel: async (id, updates) => {
     try {
       await api.updateModel(id, updates);
-      // Update local state
-      set(state => ({
-        models: state.models.map(model => 
-          model.id === id ? { ...model, ...updates, updatedAt: new Date().toISOString() } : model
-        )
-      }));
+      // Refresh models from server to get updated product associations
+      const { loadModels } = get();
+      await loadModels();
     } catch (error) {
       set({
         error: error instanceof Error ? error.message : 'Failed to update model'

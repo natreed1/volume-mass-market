@@ -5,35 +5,39 @@ import { VolumePricingService } from "../lib/db.service";
 // API endpoint for customer-facing volume pricing display
 export async function loader({ request }) {
   try {
+    console.log('API display route called');
     const url = new URL(request.url);
     const productId = url.searchParams.get('productId');
+
+    console.log('Product ID:', productId);
+    console.log('Request URL:', request.url);
+    console.log('Request headers:', Object.fromEntries(request.headers.entries()));
 
     if (!productId) {
       return json({ error: 'Product ID is required' }, { status: 400 });
     }
 
-    // Extract shop from the request host
-    const host = request.headers.get('host') || '';
-    let shop = '';
+    // Extract shop from the request headers
+    const forwardedHost = request.headers.get('x-forwarded-host');
+    const host = request.headers.get('host');
     
-    if (host.includes('.myshopify.com')) {
+    let shop = 'volumeteststore'; // default fallback
+    
+    if (forwardedHost && forwardedHost.includes('.myshopify.com')) {
+      shop = forwardedHost.replace('.myshopify.com', '');
+    } else if (host && host.includes('.myshopify.com')) {
       shop = host.replace('.myshopify.com', '');
-    } else if (host.includes('.trycloudflare.com')) {
-      // For development, we might need to extract from the URL or use a default
-      shop = 'volumeteststore'; // Default for development
     }
-
-    if (!shop) {
-      return json({
-        active: false,
-        error: 'Unable to determine shop'
-      }, { status: 400 });
-    }
+    
+    console.log('Using shop:', shop, 'for product:', productId);
+    console.log('Forwarded host:', forwardedHost);
+    console.log('Host:', host);
 
     const volumeService = new VolumePricingService(shop);
 
     // Get volume pricing settings for this product
     const settings = await volumeService.getProductVolumeSettings(productId);
+    console.log('Settings:', settings);
 
     if (!settings.enabled || !settings.model) {
       return json({
@@ -62,6 +66,7 @@ export async function loader({ request }) {
       }
     };
 
+    console.log('Returning display data:', displayData);
     return json(displayData);
   } catch (error) {
     console.error('Volume pricing display API error:', error);
@@ -73,5 +78,13 @@ export async function loader({ request }) {
 }
 
 export const headers = (headersArgs) => {
-  return boundary.headers(headersArgs);
+  return {
+    ...boundary.headers(headersArgs),
+    'Access-Control-Allow-Origin': '*',
+    'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
+    'Access-Control-Allow-Headers': 'Content-Type, Authorization',
+    'Cache-Control': 'no-cache, no-store, must-revalidate',
+    'Pragma': 'no-cache',
+    'Expires': '0'
+  };
 };

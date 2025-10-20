@@ -15,29 +15,80 @@
 </div>
 
 <script>
-  // Initialize volume pricing display
-  document.addEventListener('DOMContentLoaded', function() {
-    const containers = document.querySelectorAll('.volume-pricing-container');
+  // Initialize volume pricing display with defensive approach
+  (function() {
+    'use strict';
     
-    containers.forEach(container => {
-      const productId = container.dataset.productId;
-      
-      // Fetch volume pricing data
-      fetch(`/apps/volume-pricing/api/display?productId=gid://shopify/Product/${productId}`)
-        .then(response => response.json())
-        .then(data => {
-          if (data.active && data.tiers && data.tiers.length > 0) {
-            renderVolumePricing(container, data);
-          } else {
-            container.style.display = 'none';
+    // Function to initialize volume pricing
+    function initVolumePricing() {
+      try {
+        console.log('Volume Pricing: Initializing...');
+        const containers = document.querySelectorAll('.volume-pricing-container');
+        console.log('Volume Pricing: Found', containers.length, 'containers');
+        
+        if (containers.length === 0) {
+          console.log('Volume Pricing: No containers found, exiting');
+          return;
+        }
+        
+        containers.forEach(container => {
+          const productId = container.dataset.productId;
+          
+          if (!productId) {
+            console.warn('Volume pricing container missing product ID');
+            return;
           }
-        })
-        .catch(error => {
-          console.error('Error loading volume pricing:', error);
-          container.style.display = 'none';
+          
+          // Fetch volume pricing data via app proxy
+          const proxyUrl = `/apps/volume-pricing?productId=gid://shopify/Product/${productId}`;
+          console.log('Volume Pricing: Fetching from', proxyUrl);
+          
+          fetch(proxyUrl, {
+            method: 'GET',
+            headers: {
+              'Accept': 'application/json',
+              'Content-Type': 'application/json'
+            },
+            cache: 'no-cache'
+          })
+            .then(response => {
+              if (!response.ok) {
+                throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+              }
+              return response.json();
+            })
+            .then(data => {
+              console.log('Volume Pricing: Received data', data);
+              if (data && data.active && data.tiers && data.tiers.length > 0) {
+                console.log('Volume Pricing: Rendering with', data.tiers.length, 'tiers');
+                renderVolumePricing(container, data);
+              } else {
+                console.log('Volume Pricing: No active pricing, hiding container');
+                container.style.display = 'none';
+              }
+            })
+            .catch(error => {
+              console.error('Error loading volume pricing for product', productId, ':', error);
+              // Show a fallback message instead of hiding completely
+              container.innerHTML = '<div class="volume-pricing-error">Volume pricing temporarily unavailable</div>';
+            });
         });
-    });
-  });
+      } catch (error) {
+        console.error('Error initializing volume pricing:', error);
+      }
+    }
+    
+    // Try multiple initialization methods to handle theme conflicts
+    if (document.readyState === 'loading') {
+      document.addEventListener('DOMContentLoaded', initVolumePricing);
+    } else {
+      // DOM is already loaded
+      initVolumePricing();
+    }
+    
+    // Also try after a short delay to handle async theme loading
+    setTimeout(initVolumePricing, 1000);
+  })();
   
   function renderVolumePricing(container, data) {
     const tiers = data.tiers || [];
@@ -124,6 +175,16 @@
     text-align: center;
     padding: 1rem;
     color: #6b7280;
+  }
+  
+  .volume-pricing-error {
+    text-align: center;
+    padding: 1rem;
+    color: #dc2626;
+    background-color: #fef2f2;
+    border: 1px solid #fecaca;
+    border-radius: 8px;
+    font-size: 0.875rem;
   }
   
   .loading-spinner {

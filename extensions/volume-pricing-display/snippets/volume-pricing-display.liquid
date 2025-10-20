@@ -34,33 +34,67 @@
 </div>
 
 <script>
-  // Initialize volume pricing display
-  document.addEventListener('DOMContentLoaded', function() {
-    const containers = document.querySelectorAll('.volume-pricing-container');
+  // Initialize volume pricing display with defensive approach
+  (function() {
+    'use strict';
     
-    containers.forEach(container => {
-      const productId = container.dataset.productId;
-      const displayStyle = container.dataset.displayStyle;
-      const showPerUnit = container.dataset.showPerUnit === 'true';
-      const showCompareAt = container.dataset.showCompareAt === 'true';
-      const badgeTone = container.dataset.badgeTone;
-      
-      // Fetch volume pricing data
-      fetch(`/apps/volume-pricing/api/display?productId=gid://shopify/Product/${productId}`)
-        .then(response => response.json())
-        .then(data => {
-          if (data.active) {
-            renderVolumePricing(container, data, displayStyle, showPerUnit, showCompareAt, badgeTone);
-          } else {
-            container.style.display = 'none';
+    // Function to initialize volume pricing
+    function initVolumePricing() {
+      try {
+        const containers = document.querySelectorAll('.volume-pricing-container');
+        
+        if (containers.length === 0) {
+          return;
+        }
+        
+        containers.forEach(container => {
+          const productId = container.dataset.productId;
+          const displayStyle = container.dataset.displayStyle;
+          const showPerUnit = container.dataset.showPerUnit === 'true';
+          const showCompareAt = container.dataset.showCompareAt === 'true';
+          const badgeTone = container.dataset.badgeTone;
+          
+          if (!productId) {
+            console.warn('Volume pricing container missing product ID');
+            return;
           }
-        })
-        .catch(error => {
-          console.error('Error loading volume pricing:', error);
-          container.style.display = 'none';
+          
+          // Fetch volume pricing data via app proxy
+          fetch(`/apps/volume-pricing?productId=gid://shopify/Product/${productId}`)
+            .then(response => {
+              if (!response.ok) {
+                throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+              }
+              return response.json();
+            })
+            .then(data => {
+              if (data && data.active) {
+                renderVolumePricing(container, data, displayStyle, showPerUnit, showCompareAt, badgeTone);
+              } else {
+                container.style.display = 'none';
+              }
+            })
+            .catch(error => {
+              console.error('Error loading volume pricing for product', productId, ':', error);
+              container.style.display = 'none';
+            });
         });
-    });
-  });
+      } catch (error) {
+        console.error('Error initializing volume pricing:', error);
+      }
+    }
+    
+    // Try multiple initialization methods to handle theme conflicts
+    if (document.readyState === 'loading') {
+      document.addEventListener('DOMContentLoaded', initVolumePricing);
+    } else {
+      // DOM is already loaded
+      initVolumePricing();
+    }
+    
+    // Also try after a short delay to handle async theme loading
+    setTimeout(initVolumePricing, 1000);
+  })();
   
   function renderVolumePricing(container, data, displayStyle, showPerUnit, showCompareAt, badgeTone) {
     const tiers = data.tiers || [];

@@ -1,0 +1,269 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Volume Pricing Test</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            margin: 20px;
+            background-color: #f6f6f7;
+        }
+        .product-page {
+            max-width: 800px;
+            margin: 0 auto;
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+        }
+        .price {
+            font-size: 24px;
+            font-weight: bold;
+            color: #008060;
+            margin: 10px 0;
+        }
+        .money {
+            color: #008060;
+        }
+    </style>
+</head>
+<body>
+    <div class="product-page">
+        <h1>The Videographer Snowboard</h1>
+        <div class="price">
+            <span class="money">$29.99</span>
+        </div>
+        
+        <!-- Volume Pricing Display Block -->
+        <div 
+          id="volume-pricing-9902858010931" 
+          class="volume-pricing-container"
+          data-product-id="9902858010931"
+        >
+          <!-- Volume pricing will be loaded here via JavaScript -->
+          <div class="volume-pricing-loading">
+            <div class="loading-spinner"></div>
+            <span>Loading volume pricing...</span>
+          </div>
+        </div>
+    </div>
+
+    <script>
+      // Initialize volume pricing display with defensive approach
+      (function() {
+        'use strict';
+        
+        // Function to initialize volume pricing
+        function initVolumePricing() {
+          try {
+            console.log('Volume Pricing: Initializing...');
+            const containers = document.querySelectorAll('.volume-pricing-container');
+            console.log('Volume Pricing: Found', containers.length, 'containers');
+            
+            if (containers.length === 0) {
+              console.log('Volume Pricing: No containers found, exiting');
+              return;
+            }
+            
+            containers.forEach(container => {
+              const productId = container.dataset.productId;
+              
+              if (!productId) {
+                console.warn('Volume pricing container missing product ID');
+                return;
+              }
+              
+              // Fetch volume pricing data via app proxy
+              const proxyUrl = `https://views-grab-technology-watershed.trycloudflare.com/api/display?productId=gid://shopify/Product/${productId}`;
+              console.log('Volume Pricing: Fetching from', proxyUrl);
+              
+              fetch(proxyUrl, {
+                method: 'GET',
+                headers: {
+                  'Accept': 'application/json',
+                  'Content-Type': 'application/json',
+                  'x-forwarded-host': 'volumeteststore.myshopify.com'
+                },
+                cache: 'no-cache'
+              })
+                .then(response => {
+                  if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                  }
+                  return response.json();
+                })
+                .then(data => {
+                  console.log('Volume Pricing: Received data', data);
+                  if (data && data.active && data.tiers && data.tiers.length > 0) {
+                    console.log('Volume Pricing: Rendering with', data.tiers.length, 'tiers');
+                    renderVolumePricing(container, data);
+                  } else {
+                    console.log('Volume Pricing: No active pricing, hiding container');
+                    container.style.display = 'none';
+                  }
+                })
+                .catch(error => {
+                  console.error('Error loading volume pricing for product', productId, ':', error);
+                  // Show a fallback message instead of hiding completely
+                  container.innerHTML = '<div class="volume-pricing-error">Volume pricing temporarily unavailable</div>';
+                });
+            });
+          } catch (error) {
+            console.error('Error initializing volume pricing:', error);
+          }
+        }
+        
+        // Initialize immediately
+        initVolumePricing();
+      })();
+      
+      function renderVolumePricing(container, data) {
+        const tiers = data.tiers || [];
+        if (tiers.length === 0) {
+          container.style.display = 'none';
+          return;
+        }
+        
+        // Clear loading state
+        container.innerHTML = '';
+        
+        // Render badge row by default
+        container.innerHTML = renderBadgeRow(tiers);
+      }
+      
+      function renderBadgeRow(tiers) {
+        return `
+          <div class="volume-pricing-badge-row">
+            ${tiers.map(tier => `
+              <div class="volume-pricing-badge" style="background-color: #008060; color: white; padding: 0.75rem; border-radius: 8px; text-align: center; min-width: 120px; margin: 0.25rem; display: inline-block;">
+                <div style="font-size: 0.875rem; font-weight: 600; margin-bottom: 0.25rem;">${tier.minQty}+ units</div>
+                <div style="font-size: 1.125rem; font-weight: 700; margin-bottom: 0.25rem;">
+                  ${formatPrice(calculatePrice(tier))}
+                  <span style="font-size: 0.75rem; opacity: 0.8;">/unit</span>
+                </div>
+                <div style="font-size: 0.75rem; font-weight: 500; opacity: 0.9;">Save ${formatPrice(getSavings(tier))}</div>
+              </div>
+            `).join('')}
+          </div>
+        `;
+      }
+      
+      // Helper functions
+      function getBasePrice() {
+        const priceElement = document.querySelector('.price .money');
+        
+        if (priceElement) {
+          const priceText = priceElement.textContent;
+          const price = parseFloat(priceText.replace(/[^0-9.]/g, ''));
+          return isNaN(price) ? 29.99 : price;
+        }
+        
+        return 29.99;
+      }
+      
+      function calculatePrice(tier) {
+        if (!tier) return getBasePrice();
+        
+        const basePrice = getBasePrice();
+        if (tier.discountType === 'PERCENT') {
+          return basePrice * (1 - tier.discountValue / 100);
+        } else if (tier.discountType === 'AMOUNT') {
+          return Math.max(0, basePrice - tier.discountValue);
+        } else if (tier.discountType === 'FIXED_PRICE') {
+          return tier.discountValue;
+        }
+        return basePrice;
+      }
+      
+      function getSavings(tier) {
+        if (!tier) return 0;
+        const basePrice = getBasePrice();
+        const discountedPrice = calculatePrice(tier);
+        return basePrice - discountedPrice;
+      }
+      
+      function formatPrice(price) {
+        return new Intl.NumberFormat('en-US', {
+          style: 'currency',
+          currency: 'USD'
+        }).format(price);
+      }
+    </script>
+
+    <style>
+      .volume-pricing-container {
+        margin: 1rem 0;
+        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      }
+      
+      .volume-pricing-loading {
+        text-align: center;
+        padding: 1rem;
+        color: #6b7280;
+      }
+      
+      .volume-pricing-error {
+        text-align: center;
+        padding: 1rem;
+        color: #dc2626;
+        background-color: #fef2f2;
+        border: 1px solid #fecaca;
+        border-radius: 8px;
+        font-size: 0.875rem;
+      }
+      
+      .loading-spinner {
+        display: inline-block;
+        width: 20px;
+        height: 20px;
+        border: 3px solid #f3f3f3;
+        border-top: 3px solid #3498db;
+        border-radius: 50%;
+        animation: spin 1s linear infinite;
+        margin-right: 0.5rem;
+      }
+      
+      @keyframes spin {
+        0% { transform: rotate(0deg); }
+        100% { transform: rotate(360deg); }
+      }
+      
+      .volume-pricing-badge-row {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.5rem;
+        margin: 1rem 0;
+      }
+      
+      .volume-pricing-badge {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        padding: 0.75rem 1rem;
+        border-radius: 8px;
+        border: 2px solid transparent;
+        transition: all 0.2s ease;
+        cursor: pointer;
+        min-width: 120px;
+        text-align: center;
+      }
+      
+      .volume-pricing-badge:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+      }
+      
+      @media (max-width: 640px) {
+        .volume-pricing-badge-row {
+          flex-direction: column;
+        }
+        
+        .volume-pricing-badge {
+          min-width: auto;
+        }
+      }
+    </style>
+</body>
+</html>

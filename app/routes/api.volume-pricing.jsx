@@ -15,30 +15,85 @@ export async function loader({ request }) {
     const page = parseInt(url.searchParams.get('page') || '1');
     const limit = parseInt(url.searchParams.get('limit') || '10');
     
-    // Get volume models with filters
-    const options = {
-      active: status === 'all' ? undefined : status === 'active',
-      includeTiers: true,
-      includeProductCount: true
-    };
-    
-    const models = await volumeService.getVolumeModels(options);
-    
-    // Transform models to match store expectations
-    const transformedModels = models.map(model => ({
-      id: model.id,
-      name: model.name,
-      productIds: model.productAssociations?.map(assoc => assoc.productId) || [],
-      tiers: model.tiers || [],
-      style: {
-        preset: model.themeSettings?.displayStyle || 'BADGE_ROW',
-        showPerUnit: model.themeSettings?.showPerUnit ?? true,
-        showCompareAt: model.themeSettings?.showCompareAt ?? false,
-        badgeTone: model.themeSettings?.badgeTone || 'success'
-      },
-      active: model.active,
-      updatedAt: model.updatedAt
-    }));
+  // Get volume models with filters
+  const options = {
+    active: status === 'all' ? undefined : status === 'active',
+    includeTiers: true,
+    includeProductCount: true
+  };
+  
+  const models = await volumeService.getVolumeModels(options);
+  
+  // Fetch product details for all models
+  const { admin } = await authenticate.admin(request);
+  const productDetails = new Map();
+  
+  // Get all unique product IDs
+  const allProductIds = new Set();
+  models.forEach(model => {
+    if (model.productAssociations) {
+      model.productAssociations.forEach(assoc => {
+        allProductIds.add(assoc.productId);
+      });
+    }
+  });
+  
+  // Fetch product details from Shopify
+  if (allProductIds.size > 0) {
+    try {
+      const productIds = Array.from(allProductIds);
+      
+      const response = await admin.graphql(`
+        query getProducts($ids: [ID!]!) {
+          nodes(ids: $ids) {
+            ... on Product {
+              id
+              title
+              handle
+            }
+          }
+        }
+      `, {
+        variables: { ids: productIds }
+      });
+      
+      const data = await response.json();
+      
+      if (data.data?.nodes) {
+        data.data.nodes.forEach(product => {
+          if (product) {
+            productDetails.set(product.id, {
+              id: product.id,
+              title: product.title,
+              handle: product.handle
+            });
+          }
+        });
+      }
+    } catch (error) {
+      console.error('Error fetching product details:', error);
+    }
+  }
+  
+  // Transform models to match store expectations
+  const transformedModels = models.map(model => ({
+    id: model.id,
+    name: model.name,
+    productIds: model.productAssociations?.map(assoc => assoc.productId) || [],
+    products: model.productAssociations?.map(assoc => {
+      const product = productDetails.get(assoc.productId);
+      return product || { id: assoc.productId, title: 'Unknown Product', handle: '' };
+    }) || [],
+    tiers: model.tiers || [],
+    style: {
+      preset: model.themeSettings?.displayStyle || 'BADGE_ROW',
+      showPerUnit: model.themeSettings?.showPerUnit ?? true,
+      showCompareAt: model.themeSettings?.showCompareAt ?? false,
+      badgeTone: model.themeSettings?.badgeTone || 'success'
+    },
+    active: model.active,
+    updatedAt: model.updatedAt
+  }));
     
     // Apply client-side filtering for query
     let filteredModels = transformedModels;
@@ -78,7 +133,10 @@ export async function action({ request }) {
     if (method === 'POST') {
       // Create new volume model
       const body = await request.json();
-      const { name, products, discountType, tiers, active = false } = body;
+      const { name, products, productIds, discountType, tiers, active = false, style } = body;
+      
+      // Use products or productIds (both should work)
+      const productList = products || productIds || [];
       
       // Transform the data to match database schema
       const modelData = {
@@ -86,10 +144,10 @@ export async function action({ request }) {
         active,
         tiers: tiers || [],
         themeSettings: {
-          displayStyle: 'BADGE_ROW',
-          showPerUnit: true,
-          showCompareAt: false,
-          badgeTone: 'success'
+          displayStyle: style?.preset || 'BADGE_ROW',
+          showPerUnit: style?.showPerUnit ?? true,
+          showCompareAt: style?.showCompareAt ?? false,
+          badgeTone: style?.badgeTone || 'success'
         },
         adminSettings: {
           showInProductList: true,
@@ -101,8 +159,8 @@ export async function action({ request }) {
       const newModel = await volumeService.createVolumeModel(modelData);
       
       // Create product associations
-      if (products && products.length > 0) {
-        await volumeService.bulkApplyVolumePricing(products, newModel.id, true);
+      if (productList && productList.length > 0) {
+        await volumeService.bulkApplyVolumePricing(productList, newModel.id, true);
       }
       
       return json({ id: newModel.id });
