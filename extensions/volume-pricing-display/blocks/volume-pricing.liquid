@@ -2,9 +2,7 @@
   Volume Pricing Display Block - Interactive Version
 {% endcomment %}
 
-{%- assign display_style = block.settings.display_style | default: 'BADGE_ROW' -%}
-{%- assign show_per_unit = block.settings.show_per_unit | default: true -%}
-{%- assign show_compare_at = block.settings.show_compare_at | default: false -%}
+{%- assign display_style = block.settings.display_style | default: 'SLIDER' -%}
 {%- assign badge_tone = block.settings.badge_tone | default: 'success' -%}
 
 <div 
@@ -12,8 +10,6 @@
   class="volume-pricing-container"
   data-product-id="{{ product.id }}"
   data-display-style="{{ display_style }}"
-  data-show-per-unit="{{ show_per_unit }}"
-  data-show-compare-at="{{ show_compare_at }}"
   data-badge-tone="{{ badge_tone }}"
 >
   <!-- Volume pricing will be loaded here via JavaScript -->
@@ -43,8 +39,6 @@
         containers.forEach(container => {
           const productId = container.dataset.productId;
           const displayStyle = container.dataset.displayStyle;
-          const showPerUnit = container.dataset.showPerUnit === 'true';
-          const showCompareAt = container.dataset.showCompareAt === 'true';
           const badgeTone = container.dataset.badgeTone;
           
           if (!productId) {
@@ -74,7 +68,7 @@
               console.log('Volume Pricing: Received data', data);
               if (data && data.active && data.tiers && data.tiers.length > 0) {
                 console.log('Volume Pricing: Rendering with', data.tiers.length, 'tiers');
-                renderVolumePricing(container, data, displayStyle, showPerUnit, showCompareAt, badgeTone);
+                renderVolumePricing(container, data, displayStyle, badgeTone);
               } else {
                 console.log('Volume Pricing: No active pricing, hiding container');
                 container.style.display = 'none';
@@ -103,7 +97,7 @@
     setTimeout(initVolumePricing, 1000);
   })();
   
-  function renderVolumePricing(container, data, displayStyle, showPerUnit, showCompareAt, badgeTone) {
+  function renderVolumePricing(container, data, displayStyle, badgeTone) {
     const tiers = data.tiers || [];
     if (tiers.length === 0) {
       container.style.display = 'none';
@@ -119,23 +113,11 @@
     // Render based on display style
     switch (displayStyle) {
       case 'TIER_TABLE':
-        container.innerHTML = renderTierTable(tiers, showPerUnit);
+        container.innerHTML = renderTierTable(tiers, badgeTone);
         break;
       case 'SLIDER':
-        container.innerHTML = renderSlider(tiers, showPerUnit);
-        break;
-      case 'DROPDOWN':
-        container.innerHTML = renderDropdown(tiers, showPerUnit);
-        break;
-      case 'GRID':
-        container.innerHTML = renderGrid(tiers, showPerUnit, badgeTone);
-        break;
-      case 'INLINE_BANNER':
-        container.innerHTML = renderInlineBanner(tiers);
-        break;
-      case 'BADGE_ROW':
       default:
-        container.innerHTML = renderBadgeRow(tiers, showPerUnit, badgeTone);
+        container.innerHTML = renderSlider(tiers, badgeTone);
         break;
     }
     
@@ -169,42 +151,82 @@
     `;
   }
   
-  function renderTierTable(tiers, showPerUnit) {
+  function renderTierTable(tiers, badgeTone) {
+    const badgeColors = {
+      success: '#008060',
+      attention: '#FF8C00',
+      info: '#0066CC',
+      subdued: '#6B7280'
+    };
+    
+    const color = badgeColors[badgeTone] || badgeColors.success;
+    
     return `
       <div class="volume-pricing-table">
         <h4>Volume Pricing</h4>
-        <table>
-          <thead>
-            <tr>
-              <th>Quantity</th>
-              <th>Price</th>
-              ${showPerUnit ? '<th>Per Unit</th>' : ''}
-              <th>You Save</th>
-            </tr>
-          </thead>
-          <tbody>
-            ${tiers.map(tier => `
+        <div class="table-container">
+          <table>
+            <thead>
               <tr>
-                <td>${tier.minQty}+</td>
-                <td>${formatPrice(calculatePrice(tier))}</td>
-                ${showPerUnit ? `<td>${formatPrice(calculatePrice(tier) / tier.minQty)}</td>` : ''}
-                <td>${formatPrice(getSavings(tier))}</td>
+                <th>Quantity</th>
+                <th>Price per Unit</th>
+                <th>You Save</th>
+                <th>Select</th>
               </tr>
-            `).join('')}
-          </tbody>
-        </table>
+            </thead>
+            <tbody>
+              ${tiers.map(tier => `
+                <tr>
+                  <td>${tier.minQty}+ units</td>
+                  <td>${formatPrice(calculatePrice(tier))}</td>
+                  <td>${formatPrice(getSavings(tier))}</td>
+                  <td>
+                    <button class="select-tier-btn" onclick="selectQuantity(${tier.minQty})" style="background-color: ${color}; color: white; border: none; padding: 0.5rem 1rem; border-radius: 4px; cursor: pointer;">
+                      Select
+                    </button>
+                  </td>
+                </tr>
+              `).join('')}
+            </tbody>
+          </table>
+        </div>
+        <div class="quantity-selection">
+          <div class="quantity-input-group">
+            <label for="table-quantity-input">Quantity:</label>
+            <input type="number" id="table-quantity-input" min="1" value="1" class="quantity-input">
+            <button type="button" class="add-to-cart-btn" onclick="addToCartWithQuantity()">Add to Cart</button>
+          </div>
+          <div class="current-pricing-display">
+            <div class="price-info">
+              <span class="current-price-label">Current Price:</span>
+              <span class="current-price" id="table-current-price">${formatPrice(getBasePrice())}</span>
+            </div>
+            <div class="savings-info" id="table-savings" style="display: none;">
+              <span class="savings-label">You Save:</span>
+              <span class="savings-amount"></span>
+            </div>
+          </div>
+        </div>
       </div>
     `;
   }
   
-  function renderSlider(tiers, showPerUnit) {
+  function renderSlider(tiers, badgeTone) {
     const maxQty = Math.max(...tiers.map(tier => tier.minQty));
+    const badgeColors = {
+      success: '#008060',
+      attention: '#FF8C00',
+      info: '#0066CC',
+      subdued: '#6B7280'
+    };
+    
+    const color = badgeColors[badgeTone] || badgeColors.success;
     
     return `
       <div class="volume-pricing-slider">
         <h4>Quantity Discount</h4>
         <div class="slider-container">
-          <input type="range" min="1" max="${maxQty}" value="1" class="quantity-slider" id="quantity-slider">
+          <input type="range" min="1" max="${maxQty}" value="1" class="quantity-slider" id="quantity-slider" style="--slider-color: ${color};">
           <div class="slider-labels">
             <span>1</span>
             <span>${maxQty}+</span>
@@ -220,7 +242,7 @@
         <div class="quantity-input-container">
           <label for="quantity-input">Quantity:</label>
           <input type="number" id="quantity-input" min="1" max="${maxQty}" value="1" class="quantity-input">
-          <button type="button" class="add-to-cart-btn" onclick="addToCartWithQuantity()">Add to Cart</button>
+          <button type="button" class="add-to-cart-btn" onclick="addToCartWithQuantity()" style="background-color: ${color};">Add to Cart</button>
         </div>
       </div>
     `;
@@ -353,6 +375,11 @@
       quantityInput.value = quantity;
     }
     
+    const tableQuantityInput = document.getElementById('table-quantity-input');
+    if (tableQuantityInput) {
+      tableQuantityInput.value = quantity;
+    }
+    
     const quantitySelect = document.getElementById('quantity-select');
     if (quantitySelect) {
       quantitySelect.value = quantity;
@@ -368,13 +395,16 @@
   
   function addToCartWithQuantity() {
     const quantityInput = document.getElementById('quantity-input');
+    const tableQuantityInput = document.getElementById('table-quantity-input');
     const quantitySelect = document.getElementById('quantity-select');
     const quantitySlider = document.getElementById('quantity-slider');
     const selectedQty = document.getElementById('selected-qty');
     
     let quantity = 1;
     
-    if (quantityInput) {
+    if (tableQuantityInput) {
+      quantity = parseInt(tableQuantityInput.value) || 1;
+    } else if (quantityInput) {
       quantity = parseInt(quantityInput.value) || 1;
     } else if (quantitySelect) {
       quantity = parseInt(quantitySelect.value) || 1;
@@ -441,12 +471,17 @@
     
     // Update price displays
     const currentPrice = document.getElementById('current-price');
+    const tableCurrentPrice = document.getElementById('table-current-price');
     const dropdownPrice = document.getElementById('dropdown-price');
     const currentSavings = document.getElementById('current-savings');
+    const tableSavings = document.getElementById('table-savings');
     const dropdownSavings = document.getElementById('dropdown-savings');
     
     if (currentPrice) {
       currentPrice.textContent = formatPrice(finalPrice);
+    }
+    if (tableCurrentPrice) {
+      tableCurrentPrice.textContent = formatPrice(finalPrice);
     }
     if (dropdownPrice) {
       dropdownPrice.textContent = formatPrice(finalPrice);
@@ -457,6 +492,13 @@
         currentSavings.textContent = `Save ${formatPrice(savings)}`;
         currentSavings.style.display = 'inline';
       }
+      if (tableSavings) {
+        const savingsAmount = tableSavings.querySelector('.savings-amount');
+        if (savingsAmount) {
+          savingsAmount.textContent = formatPrice(savings);
+        }
+        tableSavings.style.display = 'block';
+      }
       if (dropdownSavings) {
         dropdownSavings.textContent = `Save ${formatPrice(savings)}`;
         dropdownSavings.style.display = 'inline';
@@ -464,6 +506,9 @@
     } else {
       if (currentSavings) {
         currentSavings.style.display = 'none';
+      }
+      if (tableSavings) {
+        tableSavings.style.display = 'none';
       }
       if (dropdownSavings) {
         dropdownSavings.style.display = 'none';
@@ -495,6 +540,15 @@
     const numberInput = document.getElementById('quantity-input');
     if (numberInput) {
       numberInput.addEventListener('input', function() {
+        const quantity = parseInt(this.value) || 1;
+        updatePricingDisplay(quantity);
+      });
+    }
+    
+    // Table quantity input event listener
+    const tableQuantityInput = document.getElementById('table-quantity-input');
+    if (tableQuantityInput) {
+      tableQuantityInput.addEventListener('input', function() {
         const quantity = parseInt(this.value) || 1;
         updatePricingDisplay(quantity);
       });
@@ -589,7 +643,7 @@
     width: 20px;
     height: 20px;
     border-radius: 50%;
-    background: #008060;
+    background: var(--slider-color, #008060);
     cursor: pointer;
   }
   
@@ -597,7 +651,7 @@
     width: 20px;
     height: 20px;
     border-radius: 50%;
-    background: #008060;
+    background: var(--slider-color, #008060);
     cursor: pointer;
     border: none;
   }
@@ -741,10 +795,15 @@
     margin: 1rem 0;
   }
   
+  .table-container {
+    overflow-x: auto;
+    margin: 1rem 0;
+  }
+  
   .volume-pricing-table table {
     width: 100%;
     border-collapse: collapse;
-    margin: 1rem 0;
+    margin: 0;
   }
   
   .volume-pricing-table th,
@@ -757,6 +816,77 @@
   .volume-pricing-table th {
     background: #f9f9f9;
     font-weight: 600;
+  }
+  
+  .select-tier-btn {
+    background-color: #008060;
+    color: white;
+    border: none;
+    padding: 0.5rem 1rem;
+    border-radius: 4px;
+    cursor: pointer;
+    font-weight: 600;
+    transition: background-color 0.2s ease;
+  }
+  
+  .select-tier-btn:hover {
+    background-color: #006b4a;
+  }
+  
+  .quantity-selection {
+    margin: 1rem 0;
+    padding: 1rem;
+    background: #f9f9f9;
+    border-radius: 8px;
+  }
+  
+  .quantity-input-group {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    margin-bottom: 1rem;
+  }
+  
+  .quantity-input-group label {
+    font-weight: 600;
+    min-width: 80px;
+  }
+  
+  .current-pricing-display {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+  }
+  
+  .price-info {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+  }
+  
+  .current-price-label {
+    font-weight: 600;
+  }
+  
+  .current-price {
+    font-size: 1.25rem;
+    font-weight: 700;
+    color: #008060;
+  }
+  
+  .savings-info {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    color: #059669;
+  }
+  
+  .savings-label {
+    font-weight: 600;
+  }
+  
+  .savings-amount {
+    font-weight: 700;
   }
   
   .volume-pricing-banner {
@@ -829,8 +959,31 @@
       align-items: stretch;
     }
     
+    .quantity-input-group {
+      flex-direction: column;
+      align-items: stretch;
+    }
+    
+    .quantity-input-group label {
+      min-width: auto;
+    }
+    
     .banner-content {
       flex-direction: column;
+    }
+    
+    .volume-pricing-table table {
+      font-size: 0.875rem;
+    }
+    
+    .volume-pricing-table th,
+    .volume-pricing-table td {
+      padding: 0.5rem;
+    }
+    
+    .select-tier-btn {
+      padding: 0.375rem 0.75rem;
+      font-size: 0.875rem;
     }
   }
 </style>
@@ -846,48 +999,20 @@
       "label": "Display Style",
       "options": [
         {
-          "value": "BADGE_ROW",
-          "label": "Badge Row"
-        },
-        {
           "value": "SLIDER",
           "label": "Quantity Slider"
         },
         {
-          "value": "DROPDOWN",
-          "label": "Quantity Dropdown"
-        },
-        {
-          "value": "GRID",
-          "label": "Pricing Grid"
-        },
-        {
           "value": "TIER_TABLE",
           "label": "Tier Table"
-        },
-        {
-          "value": "INLINE_BANNER",
-          "label": "Inline Banner"
         }
       ],
-      "default": "BADGE_ROW"
-    },
-    {
-      "type": "checkbox",
-      "id": "show_per_unit",
-      "label": "Show per unit pricing",
-      "default": true
-    },
-    {
-      "type": "checkbox",
-      "id": "show_compare_at",
-      "label": "Show compare at price",
-      "default": false
+      "default": "SLIDER"
     },
     {
       "type": "select",
       "id": "badge_tone",
-      "label": "Badge Color",
+      "label": "Color Scheme",
       "options": [
         {
           "value": "success",
