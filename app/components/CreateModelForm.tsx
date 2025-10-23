@@ -34,11 +34,7 @@ export function CreateModelForm({ open, onClose, onSubmit, products, editingMode
     name: '',
     selectedProducts: [] as string[],
     discountType: 'PERCENT' as 'PERCENT' | 'FIXED',
-    isActive: true,
-    displayStyle: 'BADGE_ROW' as 'BADGE_ROW' | 'TIER_TABLE' | 'INLINE_BANNER' | 'SLIDER' | 'DROPDOWN' | 'GRID',
-    showPerUnit: true,
-    showCompareAt: false,
-    badgeTone: 'success' as 'success' | 'attention' | 'info' | 'subdued'
+    isActive: true
   });
 
   const [pricingTiers, setPricingTiers] = useState<PricingTier[]>([
@@ -68,11 +64,7 @@ export function CreateModelForm({ open, onClose, onSubmit, products, editingMode
         name: editingModel.name || '',
         selectedProducts: editingModel.productIds || [],
         discountType: editingModel.discountType || 'PERCENT',
-        isActive: editingModel.active || false,
-        displayStyle: editingModel.style?.preset || 'BADGE_ROW',
-        showPerUnit: editingModel.style?.showPerUnit ?? true,
-        showCompareAt: editingModel.style?.showCompareAt ?? false,
-        badgeTone: editingModel.style?.badgeTone || 'success'
+        isActive: editingModel.active || false
       });
       setPricingTiers(editingModel.tiers || []);
     }
@@ -179,13 +171,7 @@ export function CreateModelForm({ open, onClose, onSubmit, products, editingMode
           discountType: tier.discountType,
           discountValue: tier.discountValue
         })),
-        active: formData.isActive,
-        style: {
-          preset: formData.displayStyle,
-          showPerUnit: formData.showPerUnit,
-          showCompareAt: formData.showCompareAt,
-          badgeTone: formData.badgeTone
-        }
+        active: formData.isActive
       };
 
       await onSubmit(modelData);
@@ -203,11 +189,7 @@ export function CreateModelForm({ open, onClose, onSubmit, products, editingMode
       name: '',
       selectedProducts: [],
       discountType: 'PERCENT',
-      isActive: true,
-      displayStyle: 'BADGE_ROW',
-      showPerUnit: true,
-      showCompareAt: false,
-      badgeTone: 'success'
+      isActive: true
     });
     setPricingTiers([
       {
@@ -398,100 +380,6 @@ export function CreateModelForm({ open, onClose, onSubmit, products, editingMode
             </LegacyStack>
           </Card>
 
-          {/* Display Style Configuration */}
-          <Card>
-            <LegacyStack vertical spacing="loose">
-              <Text variant="headingMd" as="h3">Display Style</Text>
-              <Text variant="bodySm" tone="subdued" as="p">
-                Choose how customers will see the volume pricing on your website
-              </Text>
-              
-              <Select
-                label="Display Type"
-                options={[
-                  { label: 'Badge Row - Simple badges showing discounts', value: 'BADGE_ROW' },
-                  { label: 'Tier Table - Detailed table with all tiers', value: 'TIER_TABLE' },
-                  { label: 'Inline Banner - Banner above product info', value: 'INLINE_BANNER' },
-                  { label: 'Quantity Slider - Interactive slider for quantity', value: 'SLIDER' },
-                  { label: 'Dropdown Select - Dropdown for quantity selection', value: 'DROPDOWN' },
-                  { label: 'Grid Layout - Grid of pricing options', value: 'GRID' }
-                ]}
-                value={formData.displayStyle}
-                onChange={(value) => handleFieldChange('displayStyle', value)}
-              />
-              
-              <LegacyStack spacing="loose">
-                <Select
-                  label="Badge Color"
-                  options={[
-                    { label: 'Green (Success)', value: 'success' },
-                    { label: 'Orange (Attention)', value: 'attention' },
-                    { label: 'Blue (Info)', value: 'info' },
-                    { label: 'Gray (Subdued)', value: 'subdued' }
-                  ]}
-                  value={formData.badgeTone}
-                  onChange={(value) => handleFieldChange('badgeTone', value)}
-                />
-                
-                <LegacyStack vertical spacing="tight">
-                  <Text variant="bodyMd" fontWeight="semibold" as="p">Display Options</Text>
-                  <LegacyStack spacing="tight">
-                    <label>
-                      <input
-                        type="checkbox"
-                        checked={formData.showPerUnit}
-                        onChange={(e) => handleFieldChange('showPerUnit', e.target.checked)}
-                      />
-                      <span style={{ marginLeft: '8px' }}>
-                        <Text variant="bodySm" as="span">
-                          Show per-unit pricing
-                        </Text>
-                      </span>
-                    </label>
-                    <label>
-                      <input
-                        type="checkbox"
-                        checked={formData.showCompareAt}
-                        onChange={(e) => handleFieldChange('showCompareAt', e.target.checked)}
-                      />
-                      <span style={{ marginLeft: '8px' }}>
-                        <Text variant="bodySm" as="span">
-                          Show compare-at price
-                        </Text>
-                      </span>
-                    </label>
-                  </LegacyStack>
-                </LegacyStack>
-              </LegacyStack>
-            </LegacyStack>
-          </Card>
-
-          {/* Preview */}
-          <Card>
-            <LegacyStack vertical spacing="loose">
-              <Text variant="headingMd" as="h3">Preview</Text>
-              <LegacyStack vertical spacing="tight">
-                <Text variant="bodyMd" as="p">
-                  <strong>Model:</strong> {formData.name || 'Untitled Model'}
-                </Text>
-                <Text variant="bodyMd" as="p">
-                  <strong>Products:</strong> {selectedProductLabels.length} selected
-                </Text>
-                <Text variant="bodyMd" as="p">
-                  <strong>Display:</strong> {formData.displayStyle.replace('_', ' ')} • {formData.badgeTone} badges
-                </Text>
-                <Text variant="bodyMd" as="p">
-                  <strong>Pricing Tiers:</strong>
-                </Text>
-                {pricingTiers.map((tier, index) => (
-                  <Text key={tier.id} variant="bodySm" tone="subdued" as="p">
-                    • {tier.minQty}+ units: {tier.discountValue}{tier.discountType === 'PERCENT' ? '%' : '$'} off
-                    {tier.maxQty && ` (up to ${tier.maxQty} units)`}
-                  </Text>
-                ))}
-              </LegacyStack>
-            </LegacyStack>
-          </Card>
         </LegacyStack>
       </Modal.Section>
     </Modal>

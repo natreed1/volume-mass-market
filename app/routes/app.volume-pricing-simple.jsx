@@ -217,19 +217,6 @@ export default function VolumePricingPageSimple() {
       return summaries.join('; ');
     };
 
-    const getDisplayStyleInfo = () => {
-      const style = model.style || {};
-      const displayType = style.preset || 'BADGE_ROW';
-      const displayTypes = {
-        'BADGE_ROW': 'Badge Row',
-        'TIER_TABLE': 'Tier Table',
-        'INLINE_BANNER': 'Inline Banner',
-        'SLIDER': 'Quantity Slider',
-        'DROPDOWN': 'Dropdown Select',
-        'GRID': 'Grid Layout'
-      };
-      return displayTypes[displayType] || 'Badge Row';
-    };
 
     return (
       <Card key={model.id} sectioned>
@@ -242,9 +229,6 @@ export default function VolumePricingPageSimple() {
               <Badge tone={model.active ? 'success' : 'info'}>
                 {model.active ? 'Active' : 'Inactive'}
               </Badge>
-              <Badge tone="subdued">
-                {getDisplayStyleInfo()}
-              </Badge>
             </LegacyStack>
             <Text variant="bodySm" tone="subdued" as="p">
               Products: {getProductNames()}
@@ -253,7 +237,7 @@ export default function VolumePricingPageSimple() {
               Tiers: {getTierSummary()}
             </Text>
             <Text variant="bodySm" tone="subdued" as="p">
-              Display: {getDisplayStyleInfo()} • {model.active ? 'Live on store' : 'Draft'}
+              {model.active ? 'Live on store' : 'Draft'}
             </Text>
           </LegacyStack>
           
