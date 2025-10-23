@@ -48,10 +48,34 @@ export async function loader({ request }) {
 
     const model = settings.model;
 
+    // Get the product's base price from Shopify
+    let basePrice = null;
+    try {
+      // Extract product ID from the full GID
+      const productId = productId.replace('gid://shopify/Product/', '');
+      
+      // Make a request to Shopify to get the product price
+      const shopifyResponse = await fetch(`https://${shop}.myshopify.com/admin/api/2024-01/products/${productId}.json`, {
+        headers: {
+          'X-Shopify-Access-Token': process.env.SHOPIFY_ACCESS_TOKEN || '',
+          'Content-Type': 'application/json'
+        }
+      });
+      
+      if (shopifyResponse.ok) {
+        const productData = await shopifyResponse.json();
+        basePrice = parseFloat(productData.product.variants[0]?.price || 0);
+        console.log('Retrieved product base price:', basePrice);
+      }
+    } catch (error) {
+      console.log('Could not fetch product price from Shopify:', error);
+    }
+
     // Transform the data for customer-facing display
     const displayData = {
       active: model.active,
       name: model.name,
+      basePrice: basePrice,
       tiers: model.tiers.map(tier => ({
         minQty: tier.minQty,
         maxQty: tier.maxQty,

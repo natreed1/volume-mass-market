@@ -68,6 +68,7 @@
               console.log('Volume Pricing: Received data', data);
               if (data && data.active && data.tiers && data.tiers.length > 0) {
                 console.log('Volume Pricing: Rendering with', data.tiers.length, 'tiers');
+                console.log('Volume Pricing: Data received:', data);
                 renderVolumePricing(container, data, displayStyle, badgeTone);
               } else {
                 console.log('Volume Pricing: No active pricing, hiding container');
@@ -104,8 +105,11 @@
       return;
     }
     
-    // Store tiers globally for interactive functionality
+    // Store tiers and base price globally for interactive functionality
     window.currentVolumeTiers = tiers;
+    window.currentBasePrice = data.basePrice || null;
+    
+    console.log('Volume Pricing: Using base price:', window.currentBasePrice);
     
     // Clear loading state
     container.innerHTML = '';
@@ -320,16 +324,67 @@
   
   // Helper functions
   function getBasePrice() {
-    const priceElement = document.querySelector('.price .money') ||
-                        document.querySelector('.product-price .money') ||
-                        document.querySelector('[data-price]');
-    
-    if (priceElement) {
-      const priceText = priceElement.textContent || priceElement.dataset.price;
-      const price = parseFloat(priceText.replace(/[^0-9.]/g, ''));
-      return isNaN(price) ? 29.99 : price;
+    // First, try to use the base price from the API
+    if (window.currentBasePrice && window.currentBasePrice > 0) {
+      console.log('Using API-provided base price:', window.currentBasePrice);
+      return window.currentBasePrice;
     }
     
+    // Try multiple selectors to find the product price
+    const selectors = [
+      '.price .money',
+      '.product-price .money', 
+      '.price-item--regular .money',
+      '.price-item--sale .money',
+      '.product__price .money',
+      '.product-single__price .money',
+      '.product-price .money',
+      '.price .price-item',
+      '.product__price',
+      '.price',
+      '[data-price]',
+      '.money',
+      '.price-item'
+    ];
+    
+    for (const selector of selectors) {
+      const elements = document.querySelectorAll(selector);
+      for (const element of elements) {
+        const priceText = element.textContent || element.dataset.price || element.getAttribute('data-price');
+        if (priceText) {
+          const price = parseFloat(priceText.replace(/[^0-9.]/g, ''));
+          if (!isNaN(price) && price > 0) {
+            console.log('Found product price:', price, 'from selector:', selector);
+            return price;
+          }
+        }
+      }
+    }
+    
+    // Try to get price from Shopify's global product object
+    if (window.Shopify && window.Shopify.theme && window.Shopify.theme.product) {
+      const product = window.Shopify.theme.product;
+      if (product.price) {
+        console.log('Found product price from Shopify object:', product.price / 100);
+        return product.price / 100;
+      }
+    }
+    
+    // Try to get price from product JSON
+    const productJson = document.querySelector('script[type="application/json"][data-product-json]');
+    if (productJson) {
+      try {
+        const product = JSON.parse(productJson.textContent);
+        if (product.price) {
+          console.log('Found product price from JSON:', product.price / 100);
+          return product.price / 100;
+        }
+      } catch (e) {
+        console.log('Error parsing product JSON:', e);
+      }
+    }
+    
+    console.warn('Could not find product price, using fallback');
     return 29.99;
   }
   
